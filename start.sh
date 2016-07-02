@@ -1,0 +1,6 @@
+export LC_APP_ID=OHyFYE6GI9U6a8fcetuYREfr-gzGzoHsz
+export LC_APP_KEY=8H6Yysw5ehf8O6B59ICXo4Xr
+export LC_APP_MASTER_KEY=S7k1MRJLBVfRFJP38n6dcORQ
+export LC_APP_PORT=3000
+
+python main.py
