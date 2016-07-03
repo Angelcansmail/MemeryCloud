@@ -12,6 +12,7 @@ except:
     sys.exit('Some package is missing... Perhaps <re>?')
 import seg
 import seg.analyse
+import md5
 
 wordEngStop = nltk.corpus.stopwords.words('english')
 porter = nltk.PorterStemmer()
@@ -21,9 +22,9 @@ default_logger = logging.getLogger(__name__)
 default_logger.setLevel(logging.DEBUG)
 default_logger.addHandler(log_console)
 
-fix = lambda text: escape(text.encode('utf-8'))
-
 dl = {}
+zhPattern = re.compile(u'[\u4e00-\u9fa5]+')
+
 def token_pre(s):
     s = re.sub('[^a-zA-Z]', " ", s)
     strs = re.split(r'\s+', s.lower())
@@ -45,46 +46,53 @@ def DelLastChar(str):
     return "".join(str_list)
 
 def is_chinese(uchar):
-    """判断一个unicode是否是汉字"""
-    if len(str([uchar])) > 8:
+    match = zhPattern.search(uchar)
+    if match:
         return True
     else:
         return False
 
-def process(context, flag):
-    print flag
-    if flag:
-        cn_context = context
-        cn_keyWord = seg_process(cn_context)
-    #     print keyWord
-        cn_keyWord = []
-        for x, w in seg.analyse.extract_tags(cn_context, withWeight=True):
-#             print('%s %s' % (x, w))
-            cn_keyWord.append(x)
-        cn_key_json = "{\n\t\"key\":["
-        for key in cn_keyWord:
-            cn_key_json += " \"" + key + "\","
-        cn_key_json = DelLastChar(cn_key_json)
-        cn_key_json += "]\n}"
-        print cn_key_json
-    else:
-        en_context = context
-        en_tokens = nltk.word_tokenize(en_context)
-        en_keyWord = token_pre(' '.join(en_tokens))
-        en_key_json = "{\n\t\"key\":["
-        for key in en_keyWord:
-            en_key_json += " \"" + key + "\","
-        en_key_json = DelLastChar(en_key_json)
-        en_key_json += "]\n}"
-        print en_key_json
-
-if __name__ == '__main__':
-    t1 = time.time()
-    context = "Where is my Key? Welcome to Girl Hackens"
-#     context = "我的钥匙在哪了谷歌编程女神范"
+def process(context):
+    context = context.decode('gbk', 'ignore')
+#     print type(context)
     flag = False
     if is_chinese(context):
-        en_context = context
         flag = True
-    process(context, flag)
-    default_logger.debug("All cost %.3f seconds." % (time.time() - t1))
+    
+    if flag:
+        context = seg_process(context)
+        keyWord = []
+        for x, w in seg.analyse.extract_tags(context, withWeight=True):
+#             print('%s %s' % (x, w))
+            keyWord.append(x.encode('utf-8'))
+    else:
+        tokens = nltk.word_tokenize(context)
+        keyWord = token_pre(' '.join(tokens))
+#         en_key_json = "{\n\t\"key\":["
+#         for key in en_keyWord:
+#             en_key_json += " \"" + key + "\","
+#         en_key_json = DelLastChar(en_key_json)
+#         en_key_json += "]\n}"
+#         print en_key_json
+    key_json = ""
+#     value = " ".join(keyWord)
+#     print type(keyWord[0])
+    key_values_dic = {}
+    key_values_dic['key'] = keyWord
+    key_json = json.dumps(key_values_dic)
+#     key_json = json.dumps(keyWord)
+#     print str(key_values_dic)
+#     print type(key_json)
+#     print key_json
+    return key_json
+if __name__ == '__main__':
+    use_msg = 'Use as:\n">>> python memery.py yourSentences"\n\nThis will parse a train str, extract keyword then return keyword json.'
+    if len(sys.argv) != 2: sys.exit(use_msg)
+#     context = sys.stdin
+#     context = "Where is my Key? Welcome to Girl Hackens"
+#     context = "谷歌变成女神范"
+    context = sys.argv[1]
+#     filename = sys.argv[2]
+#     print type(context)
+    key_json = process(context)
+    print key_json
